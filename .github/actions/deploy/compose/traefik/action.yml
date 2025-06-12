@@ -123,6 +123,7 @@ runs:
           fi
           DOMAIN_NAME=$DOMAIN_NAME.${{ inputs.domain }}
           echo "TARGET: $DOMAIN_NAME -> $SERVICE_NAME:$PORT"
+          echo "ENVIRONMENT (IS DEV): ${{ inputs.is_dev_deployment }}"
         done
 
     - id: ssh
