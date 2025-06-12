@@ -26,6 +26,10 @@ inputs:
   delete_before_deploy:
     required: false
     description: "delete folders before running 'docker compose up'"
+  is_dev_deployment:
+    required: false
+    description: 'true/false: adds {subdomain}.dev.{domain} and {some-service}-dev-network to docker network'
+    default: ${{ github.event_name == 'release' && github.event.action == 'published' }}
 
   target:
     required: false
@@ -116,7 +120,7 @@ runs:
           fi
 
           # VALIDATE BRANCH NAME FOR TARGET DOMAIN NAME
-          if [ "${{ env.BRANCH_NAME }}" != "master" ]; then
+          if [ ${{ inputs.is_dev_deployment }} ]; then
             DOMAIN_NAME=$DOMAIN_NAME.dev
           fi
           DOMAIN_NAME=$DOMAIN_NAME.${{ inputs.domain }}
@@ -199,14 +203,13 @@ runs:
         echo "========== SETUP NETWORK =========="
         echo ""
         
-        NETWORK_NAME=proxy-${{ env.REPOSITORY_NAME }}-network
-        if [ "${{ env.BRANCH_NAME }}" != "master" ]; then
+        NETWORK_NAME=proxy-${{ env.REPOSITORY_NAME }}
+        if [ ${{ inputs.is_dev_deployment }} ]; then
           NETWORK_NAME=$NETWORK_NAME-dev
-          echo "NETWORK NAME DEV = $NETWORK_NAME"
         fi
-        
-        echo "network=$NETWORK_NAME" >> $GITHUB_OUTPUT
+        NETWORK_NAME=$NETWORK_NAME-network
         echo "NETWORK NAME = $NETWORK_NAME"
+        echo "network=$NETWORK_NAME" >> $GITHUB_OUTPUT
 
     - id: compose-deploy
       name: create docker deploy compose
@@ -285,12 +288,18 @@ runs:
               IFS=':' read -r TARGET_DOMAIN TARGET_SERVICE TARGET_PORT <<< "$target"
 
               # SET TARGET DOMAIN NAME
-              TARGET_ROUTE=${{ github.event.repository.name }}-$actual_service
-              if [ "${{ env.BRANCH_NAME }}" != "master" ]; then
+              TARGET_ROUTE=${{ github.event.repository.name }}
+              if [ ${{ inputs.is_dev_deployment }} ]; then
                 TARGET_DOMAIN=$TARGET_DOMAIN.dev
                 TARGET_ROUTE=$TARGET_ROUTE-dev
               fi
               TARGET_DOMAIN=$TARGET_DOMAIN.${{ inputs.domain }}
+              TARGET_ROUTE=$TARGET_ROUTE-$actual_service
+        
+              echo "## 📃 SUMMARY: ${actual_service}" >> $GITHUB_STEP_SUMMARY
+              echo "- 🚀 URL    : ${TARGET_DOMAIN}" >> $GITHUB_STEP_SUMMARY
+              echo "- 🚀 Route  : ${TARGET_ROUTE}" >> $GITHUB_STEP_SUMMARY
+              echo "- 🛜 Network: ${{ steps.setup.outputs.network }} " >> $GITHUB_STEP_SUMMARY
 
               if [[ "$actual_service" == "$TARGET_SERVICE" ]]; then
                 target_found=true
