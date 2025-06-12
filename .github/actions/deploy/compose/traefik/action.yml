@@ -339,7 +339,7 @@ runs:
       name: copy files fia ssh
       shell: bash
       env:
-        TARGET_PATH: /data/compose/${{ github.event.repository.name }}${{ github.ref_name != 'master' && '-dev' || '' }}
+        TARGET_PATH: /data/compose/${{ github.event.repository.name }}${{ inputs.is_dev_deployment && '-dev' || '' }}
       run: |
         echo ""
         echo "========== COPY REPOSITORY TO REMOTE =========="
