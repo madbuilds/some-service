@@ -29,7 +29,7 @@ inputs:
   is_dev_deployment:
     required: false
     description: 'true/false: adds {subdomain}.dev.{domain} and {some-service}-dev-network to docker network'
-    default: ${{ github.event_name == 'release' && github.event.action == 'published' }}
+    default: ${{ github.event_name != 'release' || github.event.action != 'published' }}
 
   target:
     required: false
@@ -118,7 +118,7 @@ runs:
           fi
 
           # VALIDATE BRANCH NAME FOR TARGET DOMAIN NAME
-          if [ ${{ inputs.is_dev_deployment }} ]; then
+          if [ "${{ inputs.is_dev_deployment }}" == "true" ]; then
             DOMAIN_NAME=$DOMAIN_NAME.dev
           fi
           DOMAIN_NAME=$DOMAIN_NAME.${{ inputs.domain }}
@@ -202,7 +202,7 @@ runs:
         echo ""
         
         NETWORK_NAME=proxy-${{ env.REPOSITORY_NAME }}
-        if [ ${{ inputs.is_dev_deployment }} ]; then
+        if [ "${{ inputs.is_dev_deployment }}" == "true" ]; then
           NETWORK_NAME=$NETWORK_NAME-dev
         fi
         NETWORK_NAME=$NETWORK_NAME-network
@@ -285,7 +285,7 @@ runs:
 
               # SET TARGET DOMAIN NAME
               TARGET_ROUTE=${{ github.event.repository.name }}
-              if [ ${{ inputs.is_dev_deployment }} ]; then
+              if [ "${{ inputs.is_dev_deployment }}" == "true" ]; then
                 TARGET_DOMAIN=$TARGET_DOMAIN.dev
                 TARGET_ROUTE=$TARGET_ROUTE-dev
               fi
@@ -335,7 +335,7 @@ runs:
       name: copy files fia ssh
       shell: bash
       env:
-        TARGET_PATH: /data/compose/${{ github.event.repository.name }}${{ inputs.is_dev_deployment && '-dev' || '' }}
+        TARGET_PATH: /data/compose/${{ github.event.repository.name }}${{ inputs.is_dev_deployment == 'true' && '-dev' || '' }}
       run: |
         echo ""
         echo "========== COPY REPOSITORY TO REMOTE =========="
@@ -427,7 +427,7 @@ runs:
       name: execute setup
       shell: bash
       env:
-        TARGET_PATH: /data/compose/${{ github.event.repository.name }}${{ inputs.is_dev_deployment && '-dev' || '' }}
+        TARGET_PATH: /data/compose/${{ github.event.repository.name }}${{ inputs.is_dev_deployment == 'true' && '-dev' || '' }}
       run: |
         echo ""
         echo "========== EXECUTE SETUP =========="
