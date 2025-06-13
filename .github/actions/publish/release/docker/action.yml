@@ -1,3 +1,12 @@
+# FILE: ./.github/actions/publish/release/docker/action.yml
+# DESCRIPTION: allows publishing docker images to GitHub Container Registry (GHCR.IO)
+#              build docker image using Dockerfile provided
+#              TAG it based on build running from
+#                * if build is Release+Published - takes a release version and use it as tag
+#                * if build is master-branch-based - uses 'master-*' as prefix for name
+#                * if build is any dev-branch-based - uses 'dev-{short-branch-name}-*' as prefix for name
+#              keeps only last {NUMBER} of release/master/dev images in GHCR which is older than {DAYS}
+
 name: 'PUBLISH Docker Image to GHCR.io'
 description: 'Build and Push docker image to GitHub Container Registry (GHCR.io)'
 
@@ -57,6 +66,9 @@ outputs:
   image-tags:
     description: 'List of comma-separated tags applied to the image'
     value: ${{ steps.meta.outputs.tags }}
+  image-tag:
+    description: 'Single most relevant tag name (not "-latest")'
+    value: ${{ steps.extract.outputs.tag }}
 
 runs:
   using: composite
@@ -141,6 +153,25 @@ runs:
         cache-from: ${{ inputs.cache-from }}
         cache-to: ${{ inputs.cache-to }}
         provenance: false # do not generate manifests images
+
+    - name: Extract relevant tag
+      id: extract
+      shell: bash
+      run: |
+        if [[ "${{ github.event_name }}" == "release" && "${{ github.event.action }}" == "published" ]]; then
+          RELEVANT_TAG=${{ steps.meta.outputs.version }}@${{ steps.build-and-push.outputs.digest }}
+        fi
+        if [[ "${{ github.event_name }}" != "release" && "${{ github.ref_name }}" == "${{ github.event.repository.default_branch }}" ]]; then
+          RELEVANT_TAG=${{ github.event.repository.default_branch }}-${{ steps.variables.outputs.sha }}.${{github.run_number}}
+        fi
+        if [[ "${{ github.event_name }}" != "release" && "${{ github.ref_name }}" != "${{ github.event.repository.default_branch }}" ]]; then
+          RELEVANT_TAG=dev-${{ steps.variables.outputs.branch }}.${{ github.run_number }}
+        fi
+        echo "tag=${RELEVANT_TAG}" >> $GITHUB_OUTPUT
+
+        echo "### 📃 Docker Image Tags : ${{ steps.variables.outputs.image-name }}" >> $GITHUB_STEP_SUMMARY
+        echo "- 🏷️ ghcr.io/${{ github.repository_owner }}/${{ steps.variables.outputs.image-name }}:${RELEVANT_TAG}" >> $GITHUB_STEP_SUMMARY
+        echo "- 🏷️ tag list : ${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
 
     # image-tags: - must contain all tags of an image to be removed ('master*' - pattern for all tags existed)
     # if the image has: master-123 sha-123 - then image-tags also should mention that (or else nothing deleted)
