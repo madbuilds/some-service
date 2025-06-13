@@ -170,8 +170,11 @@ runs:
         echo "tag=${RELEVANT_TAG}" >> $GITHUB_OUTPUT
 
         echo "### 📃 Docker Image Tags : ${{ steps.variables.outputs.image-name }}" >> $GITHUB_STEP_SUMMARY
-        echo "- 🏷️ ghcr.io/${{ github.repository_owner }}/${{ steps.variables.outputs.image-name }}:${RELEVANT_TAG}" >> $GITHUB_STEP_SUMMARY
-        echo "- 🏷️ tag list : ${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+        echo "- 🏷️ ghcr.io/${{ github.repository_owner }}/${{ steps.variables.outputs.image-name }}:`${RELEVANT_TAG}`" >> $GITHUB_STEP_SUMMARY
+        echo "- 🏷️ available tags: " >> $GITHUB_STEP_SUMMARY
+        echo "```" >> $GITHUB_STEP_SUMMARY
+        echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+        echo "```" >> $GITHUB_STEP_SUMMARY
 
     # image-tags: - must contain all tags of an image to be removed ('master*' - pattern for all tags existed)
     # if the image has: master-123 sha-123 - then image-tags also should mention that (or else nothing deleted)
