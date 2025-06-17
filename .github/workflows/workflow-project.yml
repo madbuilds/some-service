@@ -1,0 +1,24 @@
+name: update board assignment for issues and PRs
+
+on:
+  issues:
+    types:
+      - opened
+  pull_request:
+    types:
+      - opened
+
+jobs:
+  board-update:
+    permissions:
+      issues: read
+      pull-requests: read
+      repository-projects: write
+
+    name: add to board
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/add-to-project@v1.0.2
+        with:
+          project-url: https://github.com/orgs/madbuilds/projects/7
+          github-token: ${{ github.token }}
