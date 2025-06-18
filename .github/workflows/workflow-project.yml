@@ -1,4 +1,4 @@
-name: update board assignment for issues and PRs
+name: assign to Board
 
 on:
   issues:
@@ -13,7 +13,7 @@ env:
   SYNC_CLIENT_ID:     ${{ secrets.MADBUILDS_SYNCAPP_CLIENT_ID }}
   SYNC_CLIENT_SECRET: ${{ secrets.MADBUILDS_SYNCAPP_CLIENT_SECRET }}
   SYNC_PRIVATE_KEY:   ${{ secrets.MADBUILDS_SYNCAPP_PRIVATE_KEY }}
-  
+
 jobs:
   board-update:
     permissions:
@@ -30,7 +30,7 @@ jobs:
         with:
           app_id:      ${{ env.SYNC_APP_ID }}
           private_key: ${{ env.SYNC_PRIVATE_KEY }}
-    
+
       - uses: actions/add-to-project@v1.0.2
         with:
           project-url: https://github.com/orgs/madbuilds/projects/7
