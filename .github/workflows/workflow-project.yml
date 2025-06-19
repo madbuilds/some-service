@@ -40,76 +40,38 @@ jobs:
           github-token: ${{ steps.auth.outputs.token }}
 
       - uses: actions/github-script@v7
+        if: github.event_name == 'issues'
         with:
           github-token: ${{ steps.auth.outputs.token }}
           script: |
             const title = context.payload.issue.title;
-            const issueId = context.payload.issue.node_id;
-            const projectNumber = ${{ env.PROJECT_ID }};
-            const org = '${{ env.PROJECT_OWNER }}';
-            
-            // Step 1: Get project ID
-            const { organization } = await github.graphql(`
-              query($org: String!, $number: Int!) {
-                organization(login: $org) {
-                  projectV2(number: $number) {
-                    id
-                    fields(first: 20) {
-                      nodes {
-                        ... on ProjectV2SingleSelectField {
-                          id
-                          name
-                          options {
-                            id
-                            name
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            `, { org, number: projectNumber });
-            
-            const project = organization.projectV2;
-            const typeField = project.fields.nodes.find(f => f.name === "Type");
-            
-            if (!typeField) {
-              core.setFailed("Could not find 'Type' field.");
-              return;
+            const issue_number = context.payload.issue.number;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            let type;
+            if (title.toLowerCase().includes('[request]')) {
+              type = '💡Request';
+            } else if (title.toLowerCase().includes('[feature]')) {
+              type = '🚀Feature';
+            } else if (title.toLowerCase().includes('[task]')) {
+              type = '🪧Task';
+            } else if (title.toLowerCase().includes('[bug]')) {
+              type = '🐞Bug';
             }
             
-            // Step 2: Match title prefix to Option ID
-            let optionName = null;
-            if (title.includes('[REQUEST]')) optionName = 'Request';
-            else if (title.includes('[FEATURE]')) optionName = 'Feature';
-            else if (title.includes('[TASK]')) optionName = 'Task';
-            else if (title.includes('[BUG]')) optionName = 'Bug';
-            
-            const option = typeField.options.find(opt =>
-              opt.name.toLowerCase().includes(optionName.toLowerCase())
-            );
-            if (!option) {
-              console.log(`No matching Type for title prefix: ${title}`);
-              return;
-            }
-            
-            // Step 3: Update the field
-            await github.graphql(`
-              mutation($input: UpdateProjectV2ItemFieldValueInput!) {
-                updateProjectV2ItemFieldValue(input: $input) {
-                  projectV2Item {
-                    id
-                  }
+            if (type) {
+              await github.request('PATCH /repos/{owner}/{repo}/issues/{issue_number}', {
+                owner,
+                repo,
+                issue_number,
+                type, // this is the new REST API field!
+                headers: {
+                  'X-GitHub-Api-Version': '2022-11-28',
+                  'Accept': 'application/vnd.github+json'
                 }
-              }
-            `, {
-              input: {
-                projectId: project.id,
-                itemId: issueId,
-                fieldId: typeField.id,
-                value: { singleSelectOptionId: option.id }
-              }
-            });
-            
-            console.log(`Set Type to ${optionName}`);
+              });
+              console.log(`✅ Issue type set to "${type}"`);
+            } else {
+              console.log('⚠️ No matching type found in title.');
+            }
